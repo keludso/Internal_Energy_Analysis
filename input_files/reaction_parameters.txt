@@ -1,0 +1,19 @@
+" Parameter to calculate rate const" 
+
+
+Pressure 1e-10   'Pressure in torr'
+SIG1 5.27        'cross-section'
+WELL1 440
+AMASS1 78
+CVPI 19.70
+CVPS 0.0655      'Heat Capacities'
+BG-Pressure 0.1  'Background Pressure in torr'
+SIG2 3.655
+WELL2 178.9
+AMASS2 84
+CVI 5
+CVS 0
+IRATE 0  			
+AVENU 17.3
+EC 41272 
+ROTDGN 1
