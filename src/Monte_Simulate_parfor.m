@@ -39,27 +39,35 @@ NSTART =Monte.Nstart;
 Temp = Monte.Temp;
 NOTFIN = 0;
 Coll_time =0;
-NTRAJ = zeros(1,NSTART);
 
 f = waitbar(0,' Processor Allocation ....');
 pause(.1)
 
-EDIST_par = cell(100,1);
-Traj_react = zeros(1,100);
-Coll_time = zeros(1,NSTART);
+NTRAJ_t =  cell(NSTART/100 ,1);
+Coll_time_t = cell(NSTART/100 ,1);
+Energy_DIST = cell(NSTART/100 ,1);
+absorbed_avg =zeros(1,101);
+emitted_avg =zeros(1,101);
 
 %% Running the loop
 
 for j = 1:NSTART/100 
-    EDIST_par = cell(100,1);
+    EDIST_par = cell(100 ,1);
+    NTRAJ = zeros(1,100);
+    Coll_time = zeros(1,100);  
 
-    parfor i= 1:100
+   for i= 1:100
       ICOLL = 2; 
       tic;
       EDIST = zeros(Time_res+1,4000);
+      Photon_absorbed = zeros(1,Time_res+1);
+      Photon_emitted = zeros(1,Time_res+1);
       E = Ebegin;
+      NET_A =0;
+      NET_E =0;
       status = 0;
       T=0;
+
      
       while (status == 0)
         
@@ -72,7 +80,7 @@ for j = 1:NSTART/100
           [TAU, P] = Stochastic_calc(RKCI1,RKCI2, E,EC, ALNRKE, DC, Collup, Cnorm,...
                             ALNDEN, ICOLL, Temp, MW_on, MW_Freq, MW_power, Step);      
   
-          if (TAU+ TT) > TLIM
+          if (TAU+ TT) > TLIM || isnan(TAU)
                 TAU = 1.01*TLIM;
           end
           
@@ -94,6 +102,8 @@ for j = 1:NSTART/100
         end
 
         EDIST(T_start:T_finish,K) = EDIST(T_start:T_finish,K) + 1;
+        Photon_absorbed(T_start:T_finish) = Photon_absorbed(T_start:T_finish) + NET_A;
+        Photon_emitted(T_start:T_finish) = Photon_emitted(T_start:T_finish) - NET_E;
         
         if TAU == 0
             status = 0;
@@ -101,7 +111,7 @@ for j = 1:NSTART/100
             status = 1;
         else
             T = T+ TAU;
-            [status, MW_absorbed, ICOLL, E, NET] = monte_calc(P, DC, T, E, Collup, Cnorm, ...
+            [status, MW_absorbed, ICOLL, E, NET_A, NET_E] = monte_calc(P, DC, T, E, Collup, Cnorm, ...
                                 MW_Freq, MW_on, Step, Temp, ALNDEN, MW_power);
         end
       end
@@ -112,37 +122,49 @@ for j = 1:NSTART/100
     end
     
     EDIST_par{i}  = EDIST;
+    Photon_absorbed_t{i} = Photon_absorbed;
+    Photon_emitted_t{i} = Photon_emitted;
+    MW_absorbed_t{i} = MW_absorbed;
 
-    end
+  end
 
  avg_energy = 0;
- NTRAJ_t = 1;
- Coll_time_t = 0;
- Traj_react = zeros(1,Time_res);
- Traj = 1; 
  waitbar(100*j/NSTART,f,'Trials running... ');
  
 for k = 1:100
     avg_energy = avg_energy + EDIST_par{k};
-    if NTRAJ(k) >= 1
-        T_f  = round((100*Coll_time(k)/TLIM));
-        Traj_react(T_f:end) = Traj;
-        Traj = Traj + 1;
-    end   
+    absorbed_avg = absorbed_avg + Photon_absorbed_t{k};
+    emitted_avg = emitted_avg + Photon_emitted_t{k};
+    
 end
 
 Energy_DIST{j} = avg_energy;
+NTRAJ_t{j} = NTRAJ;
+Coll_time_t{j} = Coll_time;
     
 end   
-   
+ 
+Traj = 1; 
 avg_energy = zeros(101,4000);
-    
+Traj_react = zeros(1,101);
+
 for k = 1:j
     avg_energy = avg_energy + Energy_DIST{k}; 
-end 
+    NTRAJ_m = NTRAJ_t{k};
+    Coll_time_m = Coll_time_t{k};
+    for m = 1: 100      
+        if NTRAJ_m(k) >= 1
+            T_f  = round((100*Coll_time_m(k)/TLIM));
+            Traj_react(T_f:end) = Traj;
+            Traj = Traj + 1;
+        end
+    end  
+end
 
 Energy = 1:Step:100000; %max
-Time = TLIM/Time_res:TLIM/Time_res:TLIM;
+Time = 0:TLIM/Time_res:TLIM;
+
+delete(f);
 
 % Storing the final output data
 cd ..
@@ -152,31 +174,47 @@ save (file_name);
 cd ..
 
 
-delete(f);
 
+%% Saving to a file 
+
+%data_write = fopen(file_name,'w');
 %% Plotting the data 
 figure;
-set(gca,'color',[0 0 0]);
 for i = 1:101
+
+    set(gcf,'color','w');
+    subplot(2,2,3);
+    title('Microwave Photons emitted');
+    plot(Time(1:i), emitted_avg(1:i));
+    xlabel('Time s');
+    ylabel('Photons emitted');
+    xlim([ 0 TLIM])
+    pause(0.2);
+
+    subplot(2,2,2);
+    title('Trajectories Reacted');
+    plot(Time(1:i), Traj_react(1:i));
+    xlim([ 0 TLIM])
+    xlabel('Time');
+    ylabel('Trajectories reacted');
+
+    subplot(2,2,1);
+    title('Internal Energy Distribution');
+    plot(Energy, avg_energy(i,:));
+    xlabel('Energy cm^-^1');
+    ylabel('Population');
+    pause(0.2);
+
+    subplot(2,2,4);
+    title('Microwave Photons absorbed');
+    plot(Time(1:i), absorbed_avg(1:i));
+    xlabel('Time s');
+    ylabel('Photons absorbed');
+    xlim([ 0 TLIM])
+    pause(0.2);
     
-subplot(2,2,1);
-title('Density of States');
-plot(Energy, ALNDEN);
-xlabel('Energy cm-1');
-ylabel('log(density)/cm2');
+    
 
-subplot(2,2,3);
-title('Trajectories Reacted');
-plot(Time, Traj_react);
-xlabel('Time');
-ylabel('Trajectories reacted');
-
-subplot(2,2,2);
-title('Internal Energy Distribution');
-plot(Energy, avg_energy(i,:));
-xlabel('Energy cm^-^1');
-ylabel('Population');
-pause(0.2);
 
 end
 

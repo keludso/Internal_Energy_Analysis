@@ -19,7 +19,7 @@ P(2) = 0.0;     % Optical Pump
 if MW_on == 1    % Microwave 
      
       RXY = rand(1);
-      Rnterp = RNTERP(E,ICOLL,Collup);
+      Rnterp = RNTERP(E,ICOLL, Step,Collup);
      if (RXY < Rnterp || E <= 0)    	% An up-step was chosen
         IFLAG2 = 1;                % Collisional Up-step 
      else
