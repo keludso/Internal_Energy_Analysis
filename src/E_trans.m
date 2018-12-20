@@ -35,12 +35,13 @@ Tlast = PROB;				% "old" TERM
 SUM = 0;
 Test = 1;
 EE = E;
+r_no = rand(1);
 
 if (IFLAG2 == 0) 			% Integrate over down steps
       
 %******************** Down steps ***************
 
- ADOWN = rand(1)*cnorme*(1 - up);	%  Random number-selected integral of down-steps
+ ADOWN = r_no*cnorme*(1 - up);	%  Random number-selected integral of down-steps
 
     while SUM < ADOWN && EE  > 0 && Test > error
              
@@ -88,7 +89,7 @@ else						% Up-collisions
 % ******************** Up steps ***************
 
    ETOP = E + 10.*TEMPI/1.4388;			%  E + 10 kT
-   AUP =  rand(1)*cnorme*up;			%  Random number-selected
+   AUP =  r_no*cnorme*up;			%  Random number-selected
 
    while SUM < AUP && EE<=ETOP && Test > error
 

@@ -27,7 +27,7 @@ prompt = {'File-name', 'Number of Trials','MAX Energy (cm-1)','Grid Size (cm-1):
     'Microwave ON/OFF (1 or 0)', 'Microwave Power (J/cm2/s)', 'Starting Energy (cm-1)','Temperature (K)' ,'Frame size','Vibration data file (.txt)','Reaction Parameters (.txt)'};
 title = 'Energy Distribution parameters';
 dims = [1 60];
-definput = {'name_me', '100','100000','25', '1e-6', '0','10', '40000','400', '100','vib.txt','reaction_parameters.txt' };
+definput = {'name_me', '100','100000','25', '1e-3', '0','10', '25000','500', '100','C6H6_vib.txt','reaction_parameters.txt' };
 answer = inputdlg(prompt,title,dims,definput);
 
 % Maximum energy and step size 

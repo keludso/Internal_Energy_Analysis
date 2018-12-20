@@ -36,11 +36,11 @@ tline = fgetl(vib_lev);
 tline = fgetl(vib_lev); 
 Str_file= tline;
 splt = strsplit(Str_file,' ');
-N(i) = str2num(splt{1});
-N_rots(i) = str2num(splt{2});
+N = str2num(splt{1});
+N_rots = str2num(splt{2});
 
 i = 1;
-while i<=N
+while i<=N+N_rots
     
    tline = fgetl(vib_lev); 
    Str_file= tline;
@@ -74,9 +74,36 @@ T(1) = 1;
 AT(1) = 1;
 Xe = 0;                  %Anharmonicity
 
+
+if N_rots(1)>0 
+    NR = 0;
+    FAC = 1; 
+    for i = 1:N_rots
+        NG(i) = 1;
+        B = 16.85763/we(i);     % rotational Constant from Accurate evaluation of internal energy level sums and densities including anharmonic 
+        NR = NR + NG(i);        % sum of rotor degrees of freedom 
+        RG = NG(i)/2;
+        BG = B^NG(i);
+        FAC = FAC*gamma(RG)*sqrt(BG); 
+    end
+    
+    R = NR/2;
+    FAC = FAC/gamma(1+R);
+    
+    for i = 1:Emax
+        
+        E = (i-1)*Step;
+        T(i) = FAC*((E+Step)^R - E^R);
+        
+    end
+end
+
+
+
+
 % Running over each frequency 
 
-for i = 1:N
+for i = 1+N_rots:N+N_rots
     zpe = 0.5*we(i) + 0.25*Xe;                    % Zero point energy at v=0
 
     if Xe < 0
