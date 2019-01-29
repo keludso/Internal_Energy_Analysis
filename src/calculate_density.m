@@ -98,9 +98,6 @@ if N_rots(1)>0
     end
 end
 
-
-
-
 % Running over each frequency 
 
 for i = 1+N_rots:N+N_rots

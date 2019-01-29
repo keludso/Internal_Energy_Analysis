@@ -45,25 +45,35 @@ f = waitbar(0,' Processor Allocation ....');
 pause(.1)
 
 NTRAJ_t =  cell(NSTART/par_for ,1);
-Coll_time_t = cell(NSTART/par_for ,1);
 Energy_DIST = cell(NSTART/par_for ,1);
+Coll_time_t = cell(NSTART/par_for ,1);
 absorbed_avg =zeros(1,101);
 emitted_avg =zeros(1,101);
+
+% Loading pre initalized distribution
+load('edistribution.mat')
+% start _e 
+d= 1;
+t=1;
+
 
 %% Running the loop
 
 for j = 1:NSTART/par_for 
     EDIST_par = cell(par_for ,1);
     NTRAJ = zeros(1,par_for);
-    Coll_time = zeros(1,par_for);  
-
-   parfor i= 1:par_for
+   for i= 1:par_for
       ICOLL = 2; 
       tic;
       EDIST = zeros(Time_res+1,4000);
       Photon_absorbed = zeros(1,Time_res+1);
       Photon_emitted = zeros(1,Time_res+1);
+      NN = ones(Time_res+1,1);
+
+      %% Finding the starting energy 
       E = Ebegin;
+            
+      %
       NET_A =0;
       NET_E =0;
       status = 0;
@@ -84,7 +94,7 @@ for j = 1:NSTART/par_for
                 TAU = 1.01*TLIM;
           end
           
-     % Book keeping function
+         % Book keeping function
         
          T_start = round(Time_res*TT / TLIM) + 2; %    DIVIDE TIME INTO 100 INTERVALS FROM TIME = 0.0 TO TLIM
          T_start(T_start>Time_res+1) = Time_res+1;
@@ -99,8 +109,10 @@ for j = 1:NSTART/par_for
         
         if TT == 0   %	AT T = 0 
             EDIST(1,K) = EDIST(1,K) + 1;
+            NN(1) = NN(1) + 1;
         end
 
+        NN(T_start:T_finish) = NN(T_start:T_finish) + 1;
         EDIST(T_start:T_finish,K) = EDIST(T_start:T_finish,K) + 1;
         Photon_absorbed(T_start:T_finish) = Photon_absorbed(T_start:T_finish) + NET_A;
         Photon_emitted(T_start:T_finish) = Photon_emitted(T_start:T_finish) - NET_E;
@@ -113,36 +125,35 @@ for j = 1:NSTART/par_for
             T = T+ TAU;
             [status, MW_absorbed, ICOLL, E, NET_A, NET_E] = monte_calc(P, DC, T, E, Collup, Cnorm, ...
                                 MW_Freq, MW_on, Step, Temp, ALNDEN, MW_power);
-        end
-        
-        
-        
+        end    
       end
+      
+      if T < TLIM
+          NTRAJ(i) = 1;
+          Coll_time(i) = TT;
+      end
+      
+      EDIST_par{i}  = EDIST./NN;
+      Photon_absorbed_t{i} = Photon_absorbed;
+      Photon_emitted_t{i} = Photon_emitted;
+      MW_absorbed_t{i} = MW_absorbed;
+      
+        
+   end
 
-    if T < TLIM 
-        NTRAJ(i) = 1;
-        Coll_time(i) = TT;       
-    end
-    
-    EDIST_par{i}  = EDIST;
-    Photon_absorbed_t{i} = Photon_absorbed;
-    Photon_emitted_t{i} = Photon_emitted;
-    MW_absorbed_t{i} = MW_absorbed;
-
-  end
-
- avg_energy = 0;
- waitbar(par_for*j/NSTART,f,'Trials running... ');
+  avg_energy = 0;
+  waitbar(par_for*j/NSTART,f,'Trials running... ');
  
-for k = 1:par_for
+  for k = 1:par_for
     avg_energy = avg_energy + EDIST_par{k};
     absorbed_avg = absorbed_avg + Photon_absorbed_t{k};
     emitted_avg = emitted_avg + Photon_emitted_t{k};
-end
+  end
 
-Energy_DIST{j} = avg_energy;
-NTRAJ_t{j} = NTRAJ;
-Coll_time_t{j} = Coll_time;
+  Energy_DIST{j} = avg_energy/par_for;
+  NTRAJ_t{j} = NTRAJ;
+  Coll_time_t{t} = Coll_time;
+  t = t + 1;
     
 end   
  
@@ -152,20 +163,29 @@ Traj_react = zeros(1,101);
 
 for k = 1:j
     avg_energy = avg_energy + Energy_DIST{k}; 
-    NTRAJ_m = NTRAJ_t{k};
-    Coll_time_m = Coll_time_t{k};
-    for m = 1: par_for      
-        if NTRAJ_m(m) >= 1
-            T_f  = 1+ round((100*Coll_time_m(m)/TLIM));
-            Traj_react(T_f:end) = Traj;
-            Traj = Traj + 1;
+end
+
+% Calculating Trajectories 
+sum_r = 0;
+Coll = zeros(1,101);
+for tm=1:Time_res+1
+    
+    for m = 1:NSTART/par_for
+        Coll_time = Coll_time_t{m};
+        for k = 1:length(Coll_time)
+            if tm == round(100*Coll_time(k)/TLIM)
+                sum_r = sum_r +1;
+            end
         end
-    end  
+
+    end
+    Coll(tm) = sum_r;
+    
 end
 
 Energy = 1:Step:100000; %max
 Time = 0:TLIM/Time_res:TLIM;
-Edistribution = NSTART*avg_energy/max(max(avg_energy));
+Edistribution = NSTART*avg_energy/j;
 delete(f);
 
 % Storing the final output data
@@ -192,14 +212,14 @@ for i = 1:101
 
     subplot(2,2,2);
     title('Trajectories Reacted');
-    plot(Time(1:i), Traj_react(1:i));
+    plot(Time(1:i), Coll(1:i));
     xlim([ 0 TLIM])
     xlabel('Time');
     ylabel('Trajectories reacted');
 
     subplot(2,2,1);
     title('Internal Energy Distribution');
-    plot(Energy, Edistribution(i,:));
+    plot(Energy, smooth(smooth(Edistribution(i,:))));
     xlabel('Energy cm^-^1');
     ylabel('Population');
 
